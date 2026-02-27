@@ -1,19 +1,13 @@
-// @ts-check
 import { defineConfig } from 'astro/config';
+import tailwind from '@astrojs/tailwind';
+import vercel from '@astrojs/vercel/serverless';
 
-import node from '@astrojs/node';
-
-import tailwindcss from '@tailwindcss/vite';
-
-import vercel from '@astrojs/vercel';
-
-// https://astro.build/config
 export default defineConfig({
-  adapter: vercel(),
-
+  integrations: [tailwind()],
   output: 'server',
-
-  vite: {
-    plugins: [tailwindcss()]
+  adapter: vercel(),
+  // TAMBAHKAN BLOK INI:
+  security: {
+    checkOrigin: false,
   }
 });
