@@ -5,7 +5,7 @@ import { products } from '../db/schema';
 import { eq, desc, like, or, sql } from 'drizzle-orm';
 
 // --- 1. KONFIGURASI PAGINATION & SEARCH ---
-const limit = 20; 
+const limit = 6; 
 const page = Number(Astro.url.searchParams.get('page') || '1');
 const offset = (page - 1) * limit;
 const searchQuery = Astro.url.searchParams.get('q') || '';
