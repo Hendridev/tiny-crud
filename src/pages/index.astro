@@ -1,78 +1,59 @@
 ---
+import { getDB, saveDB } from '../lib/db';
 import '../styles/global.css';
-import { db } from '../db';
-import { products } from '../db/schema';
-import { eq, desc, like, or, sql } from 'drizzle-orm';
-
-// --- 1. KONFIGURASI PAGINATION & SEARCH ---
-const limit = 6; 
+const limit = 6;
 const page = Number(Astro.url.searchParams.get('page') || '1');
-const offset = (page - 1) * limit;
 const searchQuery = Astro.url.searchParams.get('q') || '';
 
-// --- 2. LOGIKA SERVER (CRUD ACTIONS) ---
+// Ambil data dari JSON
+let allProducts = getDB();
+
 if (Astro.request.method === "POST") {
   const formData = await Astro.request.formData();
   const _action = formData.get("_action");
   const id = Number(formData.get("id"));
 
   const productData = {
-    name: formData.get("name") as string,
-    description: formData.get("description") as string,
+    name: formData.get("name"),
+    description: formData.get("description"),
     total: Number(formData.get("total") || 0),
-    unitType: formData.get("unitType") as string,
+    unitType: formData.get("unitType"),
     costPrice: Number(formData.get("costPrice") || 0),
     sellingPrice: Number(formData.get("sellingPrice") || 0),
   };
 
-  try {
-    if (_action === "create") {
-      // PENTING: Jangan masukkan 'id' agar auto-increment Turso bekerja
-      await db.insert(products).values({ 
-        ...productData, 
-        createdAt: new Date().toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) 
-      }).run();
-    } else if (_action === "update") {
-      await db.update(products).set(productData).where(eq(products.id, id)).run();
-    } else if (_action === "delete") {
-      await db.delete(products).where(eq(products.id, id)).run();
-    }
-  } catch (e) {
-    console.error("Gagal mutasi data:", e);
+  if (_action === "create") {
+    const newProduct = {
+      ...productData,
+      id: Date.now(), // Gunakan timestamp sebagai ID unik
+      createdAt: new Date().toLocaleString('id-ID')
+    };
+    allProducts.push(newProduct);
+  } 
+  else if (_action === "update") {
+    allProducts = allProducts.map(p => p.id === id ? { ...p, ...productData } : p);
+  } 
+  else if (_action === "delete") {
+    allProducts = allProducts.filter(p => p.id !== id);
   }
-  
-  return Astro.redirect(`/?page=${page}&q=${searchQuery}`);
+
+  saveDB(allProducts); // Simpan kembali ke data.json
+  return Astro.redirect(`/?q=${searchQuery}&page=${page}`);
 }
 
-// --- 3. QUERY DATA REAKTIF ---
-let filteredAll = [];
-try {
-  // Cegah error params %% dengan filter kondisional
-  if (!searchQuery.trim()) {
-    filteredAll = await db.select().from(products).all();
-  } else {
-    filteredAll = await db.select().from(products)
-      .where(
-        or(
-          like(products.name, `%${searchQuery}%`), 
-          like(products.description, `%${searchQuery}%`)
-        )
-      )
-      .all();
-  }
-} catch (e) {
-  console.error("Gagal memuat data:", e);
-}
+// --- LOGIKA FILTER & STATISTIK (Sama seperti sebelumnya) ---
+const filteredAll = allProducts.filter(p => 
+  p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase()))
+);
 
-// 4. Hitung Statistik (Berdasarkan hasil filter)
 const statTotalProducts = filteredAll.length;
-const statTotalUnits = filteredAll.reduce((acc, p) => acc + (p.total || 0), 0);
-const statTotalValue = filteredAll.reduce((acc, p) => acc + ((p.costPrice || 0) * (p.total || 0)), 0);
+const statTotalUnits = filteredAll.reduce((acc, p) => acc + p.total, 0);
+const statTotalValue = filteredAll.reduce((acc, p) => acc + (p.costPrice * p.total), 0);
 
-// 5. Sorting & Pagination (Terbaru di paling atas)
 const displayedProducts = [...filteredAll]
-  .sort((a, b) => (b.id || 0) - (a.id || 0))
-  .slice(offset, offset + limit);
+  .sort((a, b) => b.id - a.id)
+  .slice((page - 1) * limit, page * limit);
 
 const totalPages = Math.ceil(statTotalProducts / limit);
 ---

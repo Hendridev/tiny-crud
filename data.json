@@ -1,0 +1,22 @@
+[
+  {
+    "name": "Minyak Goreng",
+    "description": "Sunco",
+    "total": 20,
+    "unitType": "pcs",
+    "costPrice": 15000,
+    "sellingPrice": 17000,
+    "id": 1772270932470,
+    "createdAt": "28/2/2026, 16.28.52"
+  },
+  {
+    "name": "Buku Tulis A4 ",
+    "description": "Sinarmas",
+    "total": 10,
+    "unitType": "Per Lusin",
+    "costPrice": 40000,
+    "sellingPrice": 45000,
+    "id": 1772270960303,
+    "createdAt": "28/2/2026, 16.29.20"
+  }
+]
